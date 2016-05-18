@@ -40,7 +40,7 @@ public class CodedInputStream
     {
         buffer = NSMutableData(data: aData)
         bufferSize = Int32(buffer.length)
-        currentLimit = Int.max
+        currentLimit = Int32.max
         recursionLimit = DEFAULT_RECURSION_LIMIT
         sizeLimit = DEFAULT_SIZE_LIMIT
     }
@@ -52,7 +52,7 @@ public class CodedInputStream
         input!.open()
 
         //
-        currentLimit = Int.max
+        currentLimit = Int32.max
         recursionLimit = DEFAULT_RECURSION_LIMIT
         sizeLimit = DEFAULT_SIZE_LIMIT
     }
@@ -648,7 +648,7 @@ public class CodedInputStream
 
     public func bytesUntilLimit() ->Int32
     {
-        if (currentLimit == Int.max)
+        if (currentLimit == Int32.max)
         {
             return -1
         }
