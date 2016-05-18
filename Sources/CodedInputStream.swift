@@ -40,7 +40,7 @@ public class CodedInputStream
     {
         buffer = NSMutableData(data: aData)
         bufferSize = Int32(buffer.length)
-        currentLimit = Int32.max
+        currentLimit = INT_MAX
         recursionLimit = DEFAULT_RECURSION_LIMIT
         sizeLimit = DEFAULT_SIZE_LIMIT
     }
@@ -50,14 +50,14 @@ public class CodedInputStream
         bufferSize = 0
         input = aInputStream
         input!.open()
-
+        
         //
-        currentLimit = Int32.max
+        currentLimit = INT_MAX
         recursionLimit = DEFAULT_RECURSION_LIMIT
         sizeLimit = DEFAULT_SIZE_LIMIT
     }
     private func isAtEnd() throws -> Bool {
-
+        
         if bufferPos == bufferSize
         {
             if !(try refillBuffer(false))
@@ -67,14 +67,14 @@ public class CodedInputStream
         }
         return false
     }
-
+    
     private func refillBuffer(mustSucceed:Bool) throws -> Bool
     {
         guard bufferPos >= bufferSize else
         {
             throw ProtocolBuffersError.IllegalState("RefillBuffer called when buffer wasn't empty.")
         }
-
+        
         if (totalBytesRetired + bufferSize == currentLimit) {
             guard !mustSucceed else
             {
@@ -82,25 +82,25 @@ public class CodedInputStream
             }
             return false
         }
-
+        
         totalBytesRetired += bufferSize
-
+        
         bufferPos = 0
-
+        
         bufferSize = 0
-
-
+        
+        
         if input != nil
         {
             let pointer = UnsafeMutablePointer<UInt8>(buffer.mutableBytes)
             bufferSize = Int32(input!.read(pointer, maxLength:buffer.length))
-
+            
         }
-
+        
         if bufferSize <= 0
         {
             bufferSize = 0
-
+            
             guard !mustSucceed else
             {
                 throw ProtocolBuffersError.InvalidProtocolBuffer("Truncated Message")
@@ -111,26 +111,26 @@ public class CodedInputStream
         {
             recomputeBufferSizeAfterLimit()
             let totalBytesRead:Int32 = totalBytesRetired + bufferSize + bufferSizeAfterLimit
-
+            
             guard totalBytesRead <= sizeLimit || totalBytesRead >= 0 else {
                 throw ProtocolBuffersError.InvalidProtocolBuffer("Size Limit Exceeded")
             }
             return true
         }
     }
-
-
+    
+    
     public func readRawData(size:Int32) throws -> NSData {
-
+        
         guard size >= 0 else {
             throw ProtocolBuffersError.InvalidProtocolBuffer("Negative Size")
         }
-
+        
         if (totalBytesRetired + bufferPos + size > currentLimit) {
             try skipRawData(currentLimit - totalBytesRetired - bufferPos)
             throw ProtocolBuffersError.InvalidProtocolBuffer("Truncated Message")
         }
-
+        
         if (size <= bufferSize - bufferPos) {
             let pointer = UnsafePointer<UInt8>(buffer.bytes)
             let data = NSData(bytes: pointer + Int(bufferPos), length: Int(size))
@@ -138,14 +138,14 @@ public class CodedInputStream
             return data
         }
         else if (size < BUFFER_SIZE) {
-
+            
             let bytes = NSMutableData(length: Int(size))!
             var pos:Int32 = bufferSize - bufferPos
             memcpy(bytes.mutableBytes, buffer.mutableBytes + Int(bufferPos), Int(pos))
             bufferPos = bufferSize
-
+            
             try refillBuffer(true)
-
+            
             while (size - pos > bufferSize)
             {
                 memcpy(bytes.mutableBytes + Int(pos), buffer.mutableBytes, Int(bufferSize))
@@ -153,40 +153,40 @@ public class CodedInputStream
                 bufferPos = bufferSize
                 try refillBuffer(true)
             }
-
+            
             memcpy(bytes.mutableBytes + Int(pos), buffer.mutableBytes, Int(size - pos))
             bufferPos = size - pos
             return bytes
-
+            
         }
         else
         {
-
+            
             let originalBufferPos:Int32 = bufferPos
             let originalBufferSize:Int32 = bufferSize
-
+            
             totalBytesRetired += bufferSize
             bufferPos = 0
             bufferSize = 0
-
+            
             var sizeLeft:Int32 = size - (originalBufferSize - originalBufferPos)
             var chunks:Array<NSData> = Array<NSData>()
-
+            
             while (sizeLeft > 0) {
                 let chunk = NSMutableData(length:Int(min(sizeLeft, BUFFER_SIZE)))!
-
-
+                
+                
                 var pos:Int = 0
                 while (pos < chunk.length) {
-
+                    
                     var n:Int = 0
                     if input != nil {
-
+                        
                         let pointer = UnsafeMutablePointer<UInt8>(chunk.mutableBytes)
                         n = input!.read(pointer + Int(pos), maxLength:chunk.length - Int(pos))
                     }
                     guard n > 0 else {
-
+                        
                         throw ProtocolBuffersError.InvalidProtocolBuffer("Truncated Message")
                     }
                     totalBytesRetired += n
@@ -195,8 +195,8 @@ public class CodedInputStream
                 sizeLeft -= chunk.length
                 chunks.append(chunk)
             }
-
-
+            
+            
             let bytes = NSMutableData(length:Int(size))!
             var pos:Int = originalBufferSize - originalBufferPos
             memcpy(bytes.mutableBytes, buffer.mutableBytes + Int(originalBufferPos), pos)
@@ -205,26 +205,26 @@ public class CodedInputStream
                 memcpy(bytes.mutableBytes + pos, chunk.bytes, chunk.length)
                 pos += chunk.length
             }
-
+            
             return bytes
         }
     }
 
-
-
+    
+    
     public func skipRawData(size:Int32) throws
     {
-
+        
         guard size >= 0 else {
             throw ProtocolBuffersError.InvalidProtocolBuffer("Negative Size")
         }
-
+        
         if (totalBytesRetired + bufferPos + size > currentLimit) {
-
+            
             try skipRawData(currentLimit - totalBytesRetired - bufferPos)
             throw ProtocolBuffersError.InvalidProtocolBuffer("Truncated Message")
         }
-
+        
         if (size <= (bufferSize - bufferPos)) {
             bufferPos += size
         }
@@ -234,12 +234,12 @@ public class CodedInputStream
             totalBytesRetired += pos
             bufferPos = 0
             bufferSize = 0
-
+            
             while (pos < size) {
                 let data = NSMutableData(length: Int(size - pos))!
-
+                
                 var n:Int = 0
-
+                
                 if input == nil
                 {
                     n = -1
@@ -258,7 +258,7 @@ public class CodedInputStream
             }
         }
     }
-
+    
     public func readRawLittleEndian32() throws -> Int32
     {
         let b1:Int8 = try readRawByte()
@@ -289,10 +289,10 @@ public class CodedInputStream
         result |= ((Int64(b6) & 0xff) << 40)
         result |= ((Int64(b7) & 0xff) << 48)
         result |= ((Int64(b8) & 0xff) << 56)
-
+        
         return result
     }
-
+    
     public func readTag() throws ->Int32
     {
         if (try isAtEnd())
@@ -308,7 +308,7 @@ public class CodedInputStream
         }
         return lastTag
     }
-
+    
     public func checkLastTagWas(value:Int32) throws
     {
         guard lastTag == value else
@@ -316,12 +316,12 @@ public class CodedInputStream
             throw ProtocolBuffersError.InvalidProtocolBuffer("Invalid Tag: after tag \(lastTag)")
         }
     }
-
+    
     public func skipField(tag:Int32) throws ->  Bool
     {
         let wireFormat = WireFormat.getTagWireType(tag)
         let format:WireFormat? = WireFormat(rawValue: wireFormat)
-
+        
         guard let _ = format else {
             throw ProtocolBuffersError.InvalidProtocolBuffer("Invalid Wire Type")
         }
@@ -347,7 +347,7 @@ public class CodedInputStream
         default:
             throw ProtocolBuffersError.InvalidProtocolBuffer("Invalid Wire Type")
         }
-
+        
     }
     private func skipMessage() throws
     {
@@ -361,7 +361,7 @@ public class CodedInputStream
             }
         }
     }
-
+    
     public func readDouble() throws -> Double
     {
         let convert:Int64 = try readRawLittleEndian64()
@@ -369,7 +369,7 @@ public class CodedInputStream
         result = WireFormat.convertTypes(convertValue: convert, defaultValue: result)
         return result
     }
-
+    
     public func readFloat() throws -> Float
     {
         let convert:Int32 = try readRawLittleEndian32()
@@ -377,44 +377,44 @@ public class CodedInputStream
         result = WireFormat.convertTypes(convertValue: convert, defaultValue: result)
         return result
     }
-
+    
     public func readUInt64() throws -> UInt64
     {
         var retvalue:UInt64 = 0
         retvalue = WireFormat.convertTypes(convertValue: try readRawVarint64(), defaultValue:retvalue)
         return retvalue
     }
-
+    
     public func readInt64() throws -> Int64
     {
         return try readRawVarint64()
     }
-
+    
     public func readInt32() throws -> Int32
     {
-
+        
         return try readRawVarint32()
     }
-
+    
     public func readFixed64() throws -> UInt64
     {
         var retvalue:UInt64 = 0
         retvalue = WireFormat.convertTypes(convertValue: try readRawLittleEndian64(), defaultValue:retvalue)
         return retvalue
     }
-
+    
     public func readFixed32() throws -> UInt32
     {
         var retvalue:UInt32 = 0
         retvalue = WireFormat.convertTypes(convertValue: try readRawLittleEndian32(), defaultValue:retvalue)
         return retvalue
     }
-
+    
     public func readBool() throws ->Bool
     {
         return try readRawVarint32() != 0
     }
-
+    
     public func readRawByte() throws -> Int8
     {
         if (bufferPos == bufferSize)
@@ -422,10 +422,11 @@ public class CodedInputStream
             try refillBuffer(true)
         }
         let pointer = UnsafeMutablePointer<Int8>(buffer.mutableBytes)
-        let res = pointer[Int(bufferPos++)]
+        let res = pointer[Int(bufferPos)]
+        bufferPos+=1
         return res
     }
-
+    
     public class func readRawVarint32(firstByte:UInt8, inputStream:NSInputStream) throws -> Int32
     {
         if ((Int32(firstByte) & 0x80) == 0) {
@@ -433,33 +434,35 @@ public class CodedInputStream
         }
         var result:Int32 = Int32(firstByte) & 0x7f
         var offset:Int32 = 7
-        for (; offset < 32; offset += 7) {
+        while offset < 32 {
             var b:UInt8 = UInt8()
             guard inputStream.read(&b, maxLength: 1) > 0 else {
                 throw ProtocolBuffersError.InvalidProtocolBuffer("Truncated Message")
             }
-
+            
             result |= (Int32(b) & 0x7f) << offset
             if ((b & 0x80) == 0) {
                 return result
             }
+            offset += 7
         }
-
-        for (; offset < 64; offset += 7) {
+        
+        while offset < 64 {
             var b:UInt8 = UInt8()
             guard inputStream.read(&b, maxLength: 1) > 0 else {
                 throw ProtocolBuffersError.InvalidProtocolBuffer("Truncated Message")
             }
-
+            
             if ((b & 0x80) == 0) {
                 return result
             }
+            offset += 7
         }
-
+        
         throw ProtocolBuffersError.InvalidProtocolBuffer("Truncated Message")
     }
 
-
+    
     public func readRawVarint32() throws -> Int32
     {
         var tmp : Int8 = try readRawByte();
@@ -486,13 +489,13 @@ public class CodedInputStream
                     result |= (Int32(tmp) << 28);
                     if (tmp < 0) {
                         // Discard upper 32 bits.
-                        for (var i : Int = 0; i < 5; i++) {
+                        for _ in 0..<5 {
                             let byte = try readRawByte()
                             if (byte >= 0) {
                                 return result;
                             }
                         }
-
+                        
                         throw ProtocolBuffersError.InvalidProtocolBuffer("MalformedVarint")
                     }
                 }
@@ -500,7 +503,7 @@ public class CodedInputStream
         }
         return result;
     }
-
+    
     public func readRawVarint64() throws -> Int64
     {
         var shift:Int64 = 0
@@ -515,7 +518,7 @@ public class CodedInputStream
         }
         throw ProtocolBuffersError.InvalidProtocolBuffer("MalformedVarint")
     }
-
+    
     public func readString() throws -> String
     {
         let size:Int32 = try readRawVarint32()
@@ -523,16 +526,19 @@ public class CodedInputStream
         {
             let result = String(bytesNoCopy: (buffer.mutableBytes + Int(bufferPos)), length: Int(size), encoding: NSUTF8StringEncoding, freeWhenDone: false)
             bufferPos += size
+            guard result != nil else {
+                throw ProtocolBuffersError.InvalidProtocolBuffer("InvalidUTF8StringData")
+            }
             return result!
         }
         else
         {
             let data = try readRawData(size)
-
+            
             return String(data: data, encoding: NSUTF8StringEncoding)!
         }
     }
-
+    
     public func readData() throws -> NSData
     {
         let size = try readRawVarint32()
@@ -547,25 +553,25 @@ public class CodedInputStream
             return try readRawData(size)
         }
     }
-
+    
     public func readUInt32() throws -> UInt32
     {
-
+        
         let value:Int32 = try readRawVarint32()
         var retvalue:UInt32 = 0
         retvalue = WireFormat.convertTypes(convertValue: value, defaultValue:retvalue)
         return retvalue
     }
-
+    
     public func readEnum() throws -> Int32 {
         return try readRawVarint32()
     }
-
+    
     public func readSFixed32() throws -> Int32
     {
         return try readRawLittleEndian32()
     }
-
+    
     public func readSFixed64() throws -> Int64
     {
         return try readRawLittleEndian64()
@@ -573,13 +579,13 @@ public class CodedInputStream
     public func readSInt32() throws -> Int32 {
         return WireFormat.decodeZigZag32(try readRawVarint32())
     }
-
+    
     public func readSInt64() throws -> Int64
     {
         return WireFormat.decodeZigZag64(try readRawVarint64())
     }
     public func setRecursionLimit(limit:Int32) throws -> Int32 {
-
+        
         guard limit >= 0 else {
             throw ProtocolBuffersError.IllegalArgument("Recursion limit cannot be negative")
         }
@@ -596,12 +602,12 @@ public class CodedInputStream
         sizeLimit = limit
         return oldLimit
     }
-
+    
     private func resetSizeCounter()
     {
         totalBytesRetired = 0
     }
-
+    
     private func recomputeBufferSizeAfterLimit()
     {
         bufferSize += bufferSizeAfterLimit
@@ -616,63 +622,62 @@ public class CodedInputStream
             bufferSizeAfterLimit = 0
         }
     }
-
-    public func pushLimit(let byteLimit:Int32) throws -> Int32
+    
+    public func pushLimit(byteLimit:Int32) throws -> Int32
     {
         guard byteLimit >= 0 else {
             throw ProtocolBuffersError.InvalidProtocolBuffer("Negative Size")
         }
-        var limit = byteLimit
-        limit += totalBytesRetired + bufferPos
+        let newByteLimit = byteLimit + totalBytesRetired + bufferPos
         let oldLimit = currentLimit
-        guard limit <= oldLimit else {
+        guard newByteLimit <= oldLimit else {
             throw ProtocolBuffersError.InvalidProtocolBuffer("MalformedVarint")
         }
-        currentLimit = limit
+        currentLimit = newByteLimit
         recomputeBufferSizeAfterLimit()
         return oldLimit
     }
-
-
-
+    
+    
+    
     public func popLimit(oldLimit:Int32)
     {
         currentLimit = oldLimit
         recomputeBufferSizeAfterLimit()
     }
-
+    
     public func bytesUntilLimit() ->Int32
     {
-        if (currentLimit == Int32.max)
+        if (currentLimit == INT_MAX)
         {
             return -1
         }
-
+        
         let currentAbsolutePosition:Int32 = totalBytesRetired + bufferPos
         return currentLimit - currentAbsolutePosition
     }
-
-
+    
+    
     public func readGroup(fieldNumber:Int32, builder:MessageBuilder, extensionRegistry:ExtensionRegistry) throws
     {
-
+        
         guard recursionDepth < recursionLimit else {
             throw ProtocolBuffersError.InvalidProtocolBuffer("Recursion Limit Exceeded")
         }
-        ++recursionDepth
+        recursionDepth+=1
         try builder.mergeFromCodedInputStream(self, extensionRegistry:extensionRegistry)
         try checkLastTagWas(WireFormat.EndGroup.makeTag(fieldNumber))
-        --recursionDepth
+        recursionDepth-=1
     }
     public func readUnknownGroup(fieldNumber:Int32, builder:UnknownFieldSet.Builder) throws
     {
         guard recursionDepth < recursionLimit else {
             throw ProtocolBuffersError.InvalidProtocolBuffer("Recursion Limit Exceeded")
         }
-        ++recursionDepth
+        recursionDepth+=1
         try builder.mergeFromCodedInputStream(self)
         try checkLastTagWas(WireFormat.EndGroup.makeTag(fieldNumber))
-        --recursionDepth
+        recursionDepth-=1
     }
 
     public func readMessage(builder:MessageBuilder, extensionRegistry:ExtensionRegistry) throws {
@@ -681,11 +686,13 @@ public class CodedInputStream
             throw ProtocolBuffersError.InvalidProtocolBuffer("Recursion Limit Exceeded")
         }
         let oldLimit =  try pushLimit(length)
-        ++recursionDepth
+        recursionDepth+=1
         try builder.mergeFromCodedInputStream(self, extensionRegistry:extensionRegistry)
         try checkLastTagWas(0)
-        --recursionDepth
+        recursionDepth-=1
         popLimit(oldLimit)
     }
-
+    
 }
+
+

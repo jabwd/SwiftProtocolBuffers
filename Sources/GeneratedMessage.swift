@@ -36,11 +36,6 @@ public class GeneratedMessage:AbstractMessage
        self.unknownFields = UnknownFieldSet(fields: [:])
     }
     
-    public func writeDescriptionTo(inout output:String, indent:String) throws
-    {
-        
-    }
-    
     //Override
     public class func className() -> String
     {

@@ -30,11 +30,6 @@ public class UnknownFieldSet:Hashable,Equatable
     {
         self.init(fields: Dictionary())
     }
-    
-    public func writeDescriptionTo(inout output:String, indent:String)
-    {
-        // does nothing atm
-    }
    
     public init(fields:Dictionary<Int32,Field>)
     {
